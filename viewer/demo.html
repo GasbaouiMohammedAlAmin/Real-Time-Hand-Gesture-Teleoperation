@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Free Viewer — Simple Joint</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,500;0,9..40,700;1,9..40,500&family=JetBrains+Mono:wght@400;600&display=swap"
+    rel="stylesheet" />
+  <style>
+    :root {
+      --bg0: #e8edf2;
+      --bg1: #f7f9fb;
+      --ink: #1a2330;
+      --muted: #5c6b7a;
+      --line: rgba(26, 35, 48, 0.12);
+      --accent: #0f8f8a;
+      --accent-deep: #0a6b67;
+      --warm: #e89b3c;
+      --panel: rgba(255, 255, 255, 0.72);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      color: var(--ink);
+      font-family: "DM Sans", system-ui, sans-serif;
+      background:
+        radial-gradient(900px 520px at 70% 18%, rgba(15, 143, 138, 0.14), transparent 60%),
+        radial-gradient(700px 480px at 15% 85%, rgba(232, 155, 60, 0.12), transparent 55%),
+        linear-gradient(160deg, var(--bg1), var(--bg0));
+    }
+
+    .shell {
+      height: 100dvh;
+      max-height: 100dvh;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto auto;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 12px 16px 10px;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      animation: rise 0.55s ease both;
+    }
+
+    .brand h1 {
+      font-size: clamp(1.15rem, 2.8vw, 1.45rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+    }
+
+    .brand h1 em {
+      font-style: normal;
+      color: var(--accent-deep);
+    }
+
+    .brand p {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .logo {
+      flex: none;
+      display: block;
+    }
+
+    .logo img {
+      display: block;
+      height: 28px;
+      width: auto;
+    }
+
+    .stage {
+      position: relative;
+      min-height: 0;
+      border-radius: 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.8) inset,
+        0 12px 28px rgba(26, 35, 48, 0.07);
+      overflow: hidden;
+      animation: rise 0.7s 0.08s ease both;
+    }
+
+    .stage::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(26, 35, 48, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(26, 35, 48, 0.04) 1px, transparent 1px);
+      background-size: 28px 28px;
+      mask-image: radial-gradient(circle at 50% 45%, #000 30%, transparent 75%);
+      pointer-events: none;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hud {
+      position: absolute;
+      z-index: 2;
+      left: 12px;
+      right: 12px;
+      top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.72rem;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 10px 5px 8px;
+      backdrop-filter: blur(8px);
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #9aa7b5;
+    }
+
+    .status.live .dot {
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(15, 143, 138, 0.18);
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+
+    .meters {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      animation: rise 0.75s 0.14s ease both;
+    }
+
+    .meter {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 10px 7px;
+    }
+
+    .meter .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 5px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.68rem;
+    }
+
+    .meter .label {
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+
+    .meter .val {
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    .bar {
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(26, 35, 48, 0.08);
+      overflow: hidden;
+    }
+
+    .bar i {
+      display: block;
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), var(--warm));
+      transition: width 0.12s linear;
+    }
+
+    .meter:nth-child(1) .val {
+      color: var(--accent-deep);
+    }
+
+    .meter:nth-child(2) .val {
+      color: #c47a1a;
+    }
+
+    .meter:nth-child(3) .val {
+      color: #2f6f9f;
+    }
+
+    footer {
+      color: var(--muted);
+      font-size: 0.72rem;
+      line-height: 1.3;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      animation: rise 0.8s 0.18s ease both;
+    }
+
+    footer code {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.85em;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      padding: 1px 5px;
+    }
+
+    @keyframes pulse {
+      50% {
+        box-shadow: 0 0 0 7px transparent;
+      }
+    }
+
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    @media (max-width: 560px) {
+      header {
+        align-items: flex-start;
+      }
+
+      footer {
+        white-space: normal;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand">
+        <h1>Simple <em>joint</em> viewer</h1>
+        <p>Index finger only — 3 bend angles from your webcam</p>
+      </div>
+      <a class="logo" href="https://www.computervision.zone/" target="_blank" rel="noopener">
+        <img
+          src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPoAAAAyCAYAAAB1V8bkAAAAAXNSR0IArs4c6QAAAERlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAA+qADAAQAAAABAAAAMgAAAAB0EU4pAAAMPElEQVR4Ae1dXXIbNxIGhhT95qK3auM8JfQFstQFLGmfdp14Q/kAFnUBS7lAXPIFFOUConKAkHFcqryJ6wtY8QXE0lOU3Vqx/KYhOdivh0OJHAKY4RDDGVJAFYsz+OluNNAAuhvAMGaD5YDlgOWA5YDlgOXA8nOAy6rwj+Z1hTv9vQLz6kgvy/KscpzHWKcg2HFPlH76bftRZ5Xraut2PzgwJejPW1ffC84O7kf1o2vJBd/7tfbZj9E5bQ7Lgfxy4FbQa83rcr/QazIhNvNLbjaUeYI1TmuPd7PBbrFaDszPAWcEos9vDqyQj7gR+hfs7zQQhmLtq+XA0nDAn9GfN69qwmHNpaF6wYR6Hl8/3f7sfMFoLTrLAWMccGimgpAfG4O4YoAg5LtWyFesUe9hdRyX9Wqot12WShrfG7CfIOQNSZKNshxYKg4UHe6tM3Zrk5uZeD5g72culKDAgLOK47AvEhRNVmTAPpZ4aS9ZYXWpYrG46TjOU3WOxaR4nve+3++3Z8X2rPlnlZXYw0LPhNGWdwdr7Nxz1y4TuDErpVLp5az0J8z/UQjR6fV6RtU39IWn6At/AU1fJaRrvNhHtOn/0KZSeSxyj1dFYTy/+tnz2CcMCnsO450iK563th911bnNpnzT/M8mY96ZWahyaH49Od9Jo35o2C1g/V6OeXGxoOMNsLXjYiQVz2Xu744jvmB9xuCCNRAEcwDLwbry2S9XHSEKrx+Iwts4fIeQVEDAgQEiYoHgnDMMLNTfD13XJXdror4PGNT23+FXxs9oQJsSjQSzBaE/Gh/IHQh5vNlFiB9LrPQlLWXfbf+1HacxTNaCcC5q9UCDmUov92c0kxVbEljD9ubfDgd780TD/VMp8MGJ67hntGHLPAYjEEk4DyBMH9bW1qqzQKSVHMpdUHn8jAt5iJYahP4MOA9H8eBvdCCD1Lva53uLFu4wZYI7r8Nxpt91ernvYnPEvfVODAc/vpGWsFNbokNWMcM3c+7OrGCGp9VlXIGF2ulQv6ngt7AAnPsjYY8UdJpF82KQSn1Wj9DL+9w9pplnYS2VLSJpJyZhp5UdA6/SIo+E3RXuUVrwDcEtY4a+nTF1MIN8Un7qyplII2EHnEqkoPd4accEQlMw0prVaZbyNHr5162rA8ZZzVQ98g6HOieWp3UZnbSyK/LSRqrCXmAvcz6rE2uIPxX8lIGW7EjMtN+Ahr2ikkIk0Gz+2wv9oQ7fSFPqmbAaTpLisk8yPZlm9ec/X72PbVuYhKp5U+vlviGQe0YMaLDekp7W1hAyVxKWlJtxACDfdUS+GvLUIewM1uZGOC8JO9p+42bgnqATzTxbwQbXhX0Ly3S1JyVw/U7hDtMSfgeP2+G4JO+oP9WrqisL/mzK+DMqgxl1a/Ss+YchUnQ06ZFJoJXolLYDpWkFnRpDhYEMJsVC77gv3E2ynBoPDqOO9ERmFxjO6uYs8L5e/kLuL6eBrA+d0VT9gk7RMAVvDE7spSQ61S4sx0oaglnI7zToJMc6YQf+b8domOnRnyQG7pGD2VtWcOj6ZQ1Zmi4OPI4jXDoQ42nkxqP2J0GaCuDPBiIbUwlBBHj9FHlUyW/RDntI7KgyzBBP7X+G/FN0Av+mdumO0fZchYgMJinvjS/3uEtuiKlgVFeP0svpoI9ipJwiLKMICGI1aOR6BAk0c6zrZiBZ+UDYo2DLimrjaBA/ffF4B2rTpSwjuX5l8QuO60AYaeDoyvCCnxVZ/CgOvCuPnkP/54BLg2QnFJ/0leg7UBXWC7pgH2QFaSmLgqk3AgbCVzTqy2gwoavH0stzfpoPAk5LbOlIPs43dMg2OhYJ+fl4vOwZ8CrheBL2Bw8e7IfjTbyjnRsm4KQIowvY5DtPEqqyQmgP48ZG+M6JTmnQCjq2M0gLCjaQEi/FMF9kyrO6Wi+ngz7ogEb08vlYoC4duE7irDjeBMtZaXuGMUCon4Tj6B0diWYgGwxwAILeMQAmNgitjq6EwvkjZZrhhGBWP5Tp6rCCHwLd00QosQHodPtxQ1aW7A/CcY9laTmJK2O53oRAbkbQQ4JN+ngrIp9NzpADZBOB0S5ZP56kWzpAU5Zkgj4JPO03bL30D940woh+3X7ceta8utRZbsNl/Hfo5e9efL4nTUOkb3/IqV5O+jgEnJbqZRX9QTzpgNt47kTks8kZcyCwzKe6etQu3TOu/x16R7y+ewk/cU1aOC8tP9mnPi8pl6DftP44WoT9YZqy6BjoyK8g5B+QM0rIGxDyLeTrREO1Oe4DB5ZC0EFkBXvM67IGoV17KqutLD/O7+yoTkr5ODh/JSuXcRy5To7jGHAwEHwHId8FvbRst8FywOfAUgj6kFIDszr0clruy9qeDqvgZBbp/LkKM7jOuhgI1m9ubn7IVQUsMbngwNII+tyzOunlOJgj47rvwnMEGd+ilsSy4qnFzeg6exLHdZYasRZwrjmwDMa4OwYOdfXGXcT4E+nqvrCOR/rPQ3+5Wi93uXuIgaQ6VTDDiMB1th9FAlxeP+DcsXRjUVRZm54PDmAldgFK2mlSs1SCPprVZafpKA4W+AOZBZ708lPFhxhIL3e4qKfJ5Blhz+Q6g5C3ZoRvs+eMA8FOxUaaZC3N0v2WCbNa4JdILw/08YsY/vFzzAJb1j9+2yvsQwQHlk7QR7O6rF5TFvhovbwJOLnQy2d1nVl9XNYDbJyKA4kEXQhOOkV2IcasHuUvz9ElEuQ6a1rXWXbd6T5gTiTodDlklsyJM6vr/OVfN//Yx/bZWpZ1INxjrrMoWrowum1l7TqDSlEhuk0HTBxNGphNw80zvLR4qaqzVtBVh1eMHhNVURYVr5nVcdXR33T+cu7wzP3lEPI6GvsM1axGVJW2sj4Zv9EzIv/cyaDrWgGkQoOTIi1xNFSuc1xzkupddImJm78g6jYdwGN4iRYXtILONIdXCthGShc2LI7USUy6WV16AAbFA3856eWZBnKdoaGPQURZRwi5ziDk68jT1eUznTYYDKSdk/DQ4ET+fdM4V1jYLxW8Gl1oUVGkG43WutewnKqqsAXCtAP31GGBiYrHGXVIY0EIVpe5yiYQaP3qEzn9F/parCNYZTplcTEQkgNg24+BEVct8SpmUJr10wgngVtnCjbwdqci7yLKeGyiHrQT7/wuOt4TwUa5A5kxkYQdg/GX/YH7b1ZgXwlndvjxqFhoLuLRvxQYa8GgmYiXCpgT0dRGtM9CK+iFGHe+D0di/yaa1gSGOV9wL9ymYOr7xAj8aFYHDY0odP7ljjm/RCJUhzKEYjMUZ/L1vQoYCSEJMtLLqjyUlpQ+KocBbEsm7DSBQNg3SNiRL61BTlMts0lYlZ3hdFrUybTEvIxLLWRFG8r+QQ9tlowTNbr6iDK6ESfvl0iMaM3Rf9IbVeJUgTr2mUrfJ2GnW2ZVdpY4CPKSJ7CtNLKmJ0rQcTZbHPq6bdaUKvCPZnVFcqCXe5nr5Sr68hoP2wAZLGnZmVYgYacvntRlCFR2FlnevMeBl7RFmVZImQUnhlujTJ/JybWwF9iOioNEO9J0S1BVUWk8+HUpTVi9yC466BZ0vHaaVYOw0y2z9TRx5AA28XI9bV7q6ukURPSojVmzCoH58M/Wf1/qgGWWBt17+BHGSQrSuEQCRsI0Z7nJCmT/1oUeTcJO59vfpkXOPRF2+hrrFni4nYXAFz2HtXmMe9doiYwvOpzgq5cHTLA2NqRcDNZ4O63GH/TFQ+CMHTzHO3zeurpdove58wj3yRi/REJ3BXYcYgPjTJysqeYhOuIiQAdtIC/9GN1vRv8wMNEqKbGnBcJ9PXLjQY+lwbNLcOMGlOnAYPgmbv5582FGPkbdp3iGesxEN+C0QAv9KFQAs1IoFKoQfvTXVMIFQeX+6a3hWexUsKwcUM/Zog1DK1cvW6GV5oBTYmv4lvK90Tvna0w6JGOFfD4e2tKZcMAh66bDnJ1MsC8ZUvoI45KRbMm1HPA54KvB/iyFc9uWJ2oOwAj3JtgcpM5kUywHcsoB2OHuwrOfr05UH7y7y3UPnzAIqu6bu4fcsFVeQg5MCDrRP9wJJ45gXX64hPUxSjLtMaDjrquwQ8soYyywpePAlKBTDeiTRAV2U+OC79LhgqWr1ZwE03fhB9jIQYbKVdqhNSdbbHHLAcsBywHLAcsBywHLAcuBTDnwf6cFhmVXXCj8AAAAAElFTkSuQmCC"
+          alt="cvzone" />
+      </a>
+    </header>
+
+    <div class="stage">
+      <div class="hud">
+        <div id="status" class="status"><span class="dot"></span><span id="statusText">Waiting for Python…</span></div>
+      </div>
+      <canvas id="c"></canvas>
+    </div>
+
+    <div class="meters">
+      <div class="meter">
+        <div class="top"><span class="label">a1 knuckle</span><span class="val"><span id="a1">0</span>°</span></div>
+        <div class="bar"><i id="b1"></i></div>
+      </div>
+      <div class="meter">
+        <div class="top"><span class="label">a2 middle</span><span class="val"><span id="a2">0</span>°</span></div>
+        <div class="bar"><i id="b2"></i></div>
+      </div>
+      <div class="meter">
+        <div class="top"><span class="label">a3 tip</span><span class="val"><span id="a3">0</span>°</span></div>
+        <div class="bar"><i id="b3"></i></div>
+      </div>
+    </div>
+
+    <footer>
+      Same Python stream as the full robot hand — free users get this simple shape demo.
+      Full 5-finger 3D hand lives in <a href="robot_hand.html" style="color: var(--accent-deep); font-weight: 700; text-decoration: underline;">viewer/robot_hand.html (Click to open)</a>.
+    </footer>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("c");
+    const ctx = canvas.getContext("2d");
+    const statusEl = document.getElementById("status");
+    const statusText = document.getElementById("statusText");
+    const stage = canvas.parentElement;
+
+    let target = [0, 0, 0];
+    let angles = [0, 0, 0];
+    let t0 = performance.now();
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = stage.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      canvas._cssW = rect.width;
+      canvas._cssH = rect.height;
+    }
+    resize();
+    window.addEventListener("resize", resize);
+
+    function lerp(a, b, k) { return a + (b - a) * k; }
+
+    function roundRect(x, y, w, h, r) {
+      const rr = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + w, y, x + w, y + h, rr);
+      ctx.arcTo(x + w, y + h, x, y + h, rr);
+      ctx.arcTo(x, y + h, x, y, rr);
+      ctx.arcTo(x, y, x + w, y, rr);
+      ctx.closePath();
+    }
+
+    function drawCapsule(len, width, fill, stroke) {
+      roundRect(-width / 2, -len, width, len, width / 2);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function draw() {
+      const now = performance.now();
+      const dt = Math.min(0.05, (now - t0) / 1000);
+      t0 = now;
+
+      for (let i = 0; i < 3; i++) angles[i] = lerp(angles[i], target[i], 1 - Math.pow(0.001, dt));
+
+      const w = canvas._cssW || stage.clientWidth;
+      const h = canvas._cssH || stage.clientHeight;
+      ctx.clearRect(0, 0, w, h);
+
+      const s = Math.min(w / 680, h / 360);
+      const palmX = w * 0.5;
+      const palmY = h * 0.82;
+
+      const glow = ctx.createRadialGradient(palmX, palmY, 10, palmX, palmY, 180 * s);
+      glow.addColorStop(0, "rgba(15, 143, 138, 0.16)");
+      glow.addColorStop(1, "rgba(15, 143, 138, 0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, w, h);
+
+      const idle = Math.sin(now / 900) * 2.2;
+      const drawAngles = angles.map((a, i) => a + (Math.abs(a) < 2 ? idle * (i === 1 ? -0.4 : 0.25) : 0));
+
+      ctx.save();
+      ctx.shadowColor = "rgba(26, 35, 48, 0.18)";
+      ctx.shadowBlur = 20;
+      ctx.shadowOffsetY = 8;
+      roundRect(palmX - 60 * s, palmY - 12 * s, 120 * s, 78 * s, 20 * s);
+      const palmGrad = ctx.createLinearGradient(palmX, palmY - 12 * s, palmX, palmY + 66 * s);
+      palmGrad.addColorStop(0, "#f4f7fa");
+      palmGrad.addColorStop(1, "#d7e0e8");
+      ctx.fillStyle = palmGrad;
+      ctx.fill();
+      ctx.shadowColor = "transparent";
+      ctx.strokeStyle = "rgba(26, 35, 48, 0.16)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.fillStyle = "#5c6b7a";
+      ctx.font = `600 ${Math.max(10, 12 * s)}px 'JetBrains Mono', monospace`;
+      ctx.textAlign = "center";
+      ctx.fillText("PALM", palmX, palmY + 36 * s);
+
+      const colors = [
+        { fill: "#14a39d", stroke: "#0a6b67", joint: "#0f8f8a" },
+        { fill: "#f0a94a", stroke: "#b8731a", joint: "#e89b3c" },
+        { fill: "#4f93c8", stroke: "#2f6f9f", joint: "#3f82b8" },
+      ];
+      const segW = [40, 34, 28].map(v => v * s);
+      const segLens = [72, 60, 46].map(v => v * s);
+
+      let x = palmX, y = palmY - 8 * s;
+      let heading = -Math.PI / 2;
+
+      for (let i = 0; i < 3; i++) {
+        heading += (drawAngles[i] * Math.PI) / 180;
+        const c = colors[i];
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(heading);
+        ctx.shadowColor = "rgba(26, 35, 48, 0.18)";
+        ctx.shadowBlur = 12;
+        ctx.shadowOffsetY = 4;
+        drawCapsule(segLens[i], segW[i], c.fill, c.stroke);
+        ctx.shadowColor = "transparent";
+
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        roundRect(-14 * s, -segLens[i] / 2 - 9 * s, 28 * s, 18 * s, 7 * s);
+        ctx.fill();
+        ctx.fillStyle = c.stroke;
+        ctx.font = `700 ${Math.max(10, 11 * s)}px 'JetBrains Mono', monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("a" + (i + 1), 0, -segLens[i] / 2);
+        ctx.restore();
+
+        ctx.beginPath();
+        ctx.arc(x, y, 9 * s, 0, Math.PI * 2);
+        ctx.fillStyle = "#fff";
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x, y, 6 * s, 0, Math.PI * 2);
+        ctx.fillStyle = c.joint;
+        ctx.fill();
+
+        x += Math.cos(heading) * segLens[i];
+        y += Math.sin(heading) * segLens[i];
+      }
+
+      ctx.beginPath();
+      ctx.arc(x, y, 10 * s, 0, Math.PI * 2);
+      ctx.fillStyle = "#1a2330";
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x, y, 6 * s, 0, Math.PI * 2);
+      ctx.fillStyle = "#fff";
+      ctx.fill();
+
+      for (let i = 0; i < 3; i++) {
+        const deg = Math.round(angles[i]);
+        document.getElementById("a" + (i + 1)).textContent = deg;
+        document.getElementById("b" + (i + 1)).style.width = Math.min(100, (deg / 120) * 100) + "%";
+      }
+
+      requestAnimationFrame(draw);
+    }
+    draw();
+
+    function apply(data) {
+      const a = data.index;
+      if (!Array.isArray(a) || a.length < 3) return;
+      target = a.map(Number);
+      console.log(a, '============>', target)
+    }
+
+    function connect() {
+      let ws;
+      try { ws = new WebSocket("ws://localhost:8765"); }
+      catch (e) { setTimeout(connect, 1500); return; }
+
+      ws.onopen = () => {
+        statusText.textContent = "Connected to Python";
+        statusEl.classList.add("live");
+      };
+      ws.onmessage = (e) => {
+        try { apply(JSON.parse(e.data)); } catch (err) { }
+      };
+      ws.onclose = () => {
+        statusText.textContent = "Waiting for Python…";
+        statusEl.classList.remove("live");
+        setTimeout(connect, 1000);
+      };
+    }
+    connect();
+  </script>
+</body>
+
+</html>

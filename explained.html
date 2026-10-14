@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Explained — Robot Hand Gesture Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a222c;
+      --text: #e8eef4;
+      --muted: #8b9aab;
+      --line: #3d4f63;
+      --code: #121820;
+      --cam: #5b9fd4;
+      --py: #e8b84a;
+      --ws: #ff7a59;
+      --view: #6ecf8e;
+      --accent: #14a39d;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "DM Sans", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+    h1 {
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin: 0 0 8px;
+    }
+    .sub { color: var(--muted); margin: 0 0 32px; font-size: 1.05rem; }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    h2 {
+      margin: 0 0 12px;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+    h3 {
+      margin: 18px 0 8px;
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--py);
+    }
+    p { margin: 0 0 12px; color: #d0dae6; }
+    p:last-child { margin-bottom: 0; }
+    ul, ol { color: #d0dae6; margin: 0 0 12px; padding-left: 1.25rem; }
+    li { margin-bottom: 6px; }
+    .mono, code {
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: 0.9em;
+    }
+    code {
+      background: var(--code);
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      padding: 1px 6px;
+      color: #e8eef4;
+    }
+    pre {
+      background: var(--code);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px 16px;
+      overflow-x: auto;
+      margin: 12px 0 0;
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: 0.84rem;
+      line-height: 1.5;
+      color: #d0dae6;
+    }
+    .diagram {
+      width: 100%;
+      display: block;
+      margin: 10px auto 4px;
+      background: var(--code);
+      border-radius: 12px;
+    }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      justify-content: center;
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .legend i {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    .files {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+      margin-top: 8px;
+    }
+    .file {
+      background: var(--code);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .file strong {
+      display: block;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.88rem;
+      margin-bottom: 6px;
+      color: var(--cam);
+    }
+    .file p { font-size: 0.9rem; margin: 0; }
+    .step {
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      gap: 12px;
+      margin-bottom: 14px;
+      align-items: start;
+    }
+    .step:last-child { margin-bottom: 0; }
+    .num {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #243040;
+      border: 1px solid var(--line);
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      color: var(--py);
+    }
+    .pill {
+      display: inline-block;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid rgba(20, 163, 157, 0.35);
+      background: rgba(20, 163, 157, 0.12);
+      border-radius: 999px;
+      padding: 4px 10px;
+      margin-bottom: 14px;
+    }
+    .hl-cam { color: var(--cam); }
+    .hl-py { color: var(--py); }
+    .hl-ws { color: var(--ws); }
+    .hl-view { color: var(--view); }
+  
+    .hl-a { color: var(--cam); }
+    .hl-b { color: var(--py); }
+    .hl-c { color: var(--view); }
+    .hl-v1 { color: var(--ws); }
+    .hl-v2 { color: #c084fc; }
+    .leg-a::before { background: var(--cam); }
+    .leg-b::before { background: var(--py); }
+    .leg-c::before { background: var(--view); }
+    .leg-v1::before { background: var(--ws); border-radius: 2px; }
+    .leg-v2::before { background: #c084fc; border-radius: 2px; }
+    .legend span::before {
+      content: ";
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 7px;
+      vertical-align: middle;
+    }
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 700px) {
+      .compare { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--code);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+    }
+    .card h3 {
+      margin: 0 0 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .card .note {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-top: 6px;
+    }
+    .formula {
+      text-align: center;
+      font-size: 1.15rem;
+      padding: 16px;
+      background: var(--code);
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      margin: 12px 0;
+      letter-spacing: 0.02em;
+    }
+
+  </style>
+</head>
+<body>
+  <main>
+    <div class="pill">Complete guide</div>
+    <h1>Robot Hand Gesture Control — Explained</h1>
+    <p class="sub">
+      Part A: how the whole project works. Part B: how <span class="mono">bendAngle</span> measures each joint.
+    </p>
+    <nav style="display:flex;gap:10px;flex-wrap:wrap;margin:0 0 28px">
+      <a href="#part-a" style="color:#14a39d;text-decoration:none;border:1px solid rgba(20,163,157,.35);background:rgba(20,163,157,.12);padding:6px 12px;border-radius:999px;font-size:.85rem">Part A · Project</a>
+      <a href="#bendAngle" style="color:#e8b84a;text-decoration:none;border:1px solid rgba(232,184,74,.35);background:rgba(232,184,74,.12);padding:6px 12px;border-radius:999px;font-size:.85rem">Part B · bendAngle</a>
+    </nav>
+
+    
+
+    <h2 id="part-a" style="font-size:1.35rem;margin:8px 0 16px;color:#14a39d">Part A — How the project works</h2>
+    <!-- BIG PICTURE -->
+    <section>
+      <h2>1. Big picture</h2>
+      <p>
+        One sentence: <strong>webcam → Python angles → WebSocket → browser viewer</strong>.
+      </p>
+
+      <svg class="diagram" viewBox="0 0 920 220" role="img" aria-label="High level project flow">
+        <!-- boxes -->
+        <rect x="30" y="70" width="150" height="70" rx="14" fill="#1e3348" stroke="#5b9fd4" stroke-width="2"/>
+        <text x="105" y="100" text-anchor="middle" fill="#5b9fd4" font-size="15" font-family="JetBrains Mono,monospace" font-weight="700">Webcam</text>
+        <text x="105" y="122" text-anchor="middle" fill="#8b9aab" font-size="12">video frames</text>
+
+        <path d="M190 105 H230" stroke="#8b9aab" stroke-width="2" marker-end="url(#arrow)"/>
+
+        <rect x="230" y="55" width="200" height="100" rx="14" fill="#3a2f18" stroke="#e8b84a" stroke-width="2"/>
+        <text x="330" y="85" text-anchor="middle" fill="#e8b84a" font-size="15" font-family="JetBrains Mono,monospace" font-weight="700">main.py</text>
+        <text x="330" y="108" text-anchor="middle" fill="#d0dae6" font-size="12">MediaPipe / cvzone</text>
+        <text x="330" y="128" text-anchor="middle" fill="#8b9aab" font-size="12">landmarks → bendAngle</text>
+
+        <path d="M430 105 H470" stroke="#8b9aab" stroke-width="2" marker-end="url(#arrow)"/>
+
+        <rect x="470" y="55" width="200" height="100" rx="14" fill="#3a241c" stroke="#ff7a59" stroke-width="2"/>
+        <text x="570" y="85" text-anchor="middle" fill="#ff7a59" font-size="15" font-family="JetBrains Mono,monospace" font-weight="700">robothand.py</text>
+        <text x="570" y="108" text-anchor="middle" fill="#d0dae6" font-size="12">WebSocket server</text>
+        <text x="570" y="128" text-anchor="middle" fill="#8b9aab" font-size="12">ws://localhost:8765</text>
+
+        <path d="M670 105 H710" stroke="#8b9aab" stroke-width="2" marker-end="url(#arrow)"/>
+
+        <rect x="710" y="55" width="180" height="100" rx="14" fill="#1c3328" stroke="#6ecf8e" stroke-width="2"/>
+        <text x="800" y="85" text-anchor="middle" fill="#6ecf8e" font-size="15" font-family="JetBrains Mono,monospace" font-weight="700">Viewer</text>
+        <text x="800" y="108" text-anchor="middle" fill="#d0dae6" font-size="12">browser HTML</text>
+        <text x="800" y="128" text-anchor="middle" fill="#8b9aab" font-size="12">draws the hand</text>
+
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="#8b9aab"/>
+          </marker>
+        </defs>
+
+        <text x="460" y="195" text-anchor="middle" fill="#8b9aab" font-size="13">
+          Python does the vision. The browser only renders.
+        </text>
+      </svg>
+    </section>
+
+    <!-- DETAILED FLOW -->
+    <section>
+      <h2>2. Detailed flowchart (what happens each frame)</h2>
+
+      <svg class="diagram" viewBox="0 0 920 560" role="img" aria-label="Detailed frame loop flowchart">
+        <defs>
+          <marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="#8b9aab"/>
+          </marker>
+        </defs>
+
+        <!-- start -->
+        <rect x="320" y="20" width="280" height="44" rx="22" fill="#243040" stroke="#8b9aab" stroke-width="1.5"/>
+        <text x="460" y="48" text-anchor="middle" fill="#e8eef4" font-size="14" font-family="JetBrains Mono,monospace">Start: python main.py</text>
+
+        <path d="M460 64 V88" stroke="#8b9aab" stroke-width="2" marker-end="url(#a2)"/>
+
+        <rect x="300" y="88" width="320" height="50" rx="12" fill="#3a2f18" stroke="#e8b84a" stroke-width="2"/>
+        <text x="460" y="110" text-anchor="middle" fill="#e8b84a" font-size="13" font-family="JetBrains Mono,monospace">RobotHand() starts WS server</text>
+        <text x="460" y="128" text-anchor="middle" fill="#8b9aab" font-size="11">opens viewer if not connected</text>
+
+        <path d="M460 138 V162" stroke="#8b9aab" stroke-width="2" marker-end="url(#a2)"/>
+
+        <rect x="300" y="162" width="320" height="44" rx="12" fill="#1e3348" stroke="#5b9fd4" stroke-width="2"/>
+        <text x="460" y="190" text-anchor="middle" fill="#5b9fd4" font-size="13" font-family="JetBrains Mono,monospace">cap.read() → flip image</text>
+
+        <path d="M460 206 V230" stroke="#8b9aab" stroke-width="2" marker-end="url(#a2)"/>
+
+        <rect x="280" y="230" width="360" height="44" rx="12" fill="#1e3348" stroke="#5b9fd4" stroke-width="2"/>
+        <text x="460" y="258" text-anchor="middle" fill="#5b9fd4" font-size="13" font-family="JetBrains Mono,monospace">detector.findHands(img)</text>
+
+        <path d="M460 274 V298" stroke="#8b9aab" stroke-width="2" marker-end="url(#a2)"/>
+
+        <!-- decision -->
+        <path d="M460 298 L560 330 L460 362 L360 330 Z" fill="#2a2438" stroke="#c084fc" stroke-width="2"/>
+        <text x="460" y="335" text-anchor="middle" fill="#c084fc" font-size="13" font-family="JetBrains Mono,monospace">hand found?</text>
+
+        <path d="M560 330 H640 V380" stroke="#8b9aab" stroke-width="2" marker-end="url(#a2)"/>
+        <text x="600" y="322" fill="#8b9aab" font-size="11">no</text>
+
+        <rect x="560" y="380" width="200" height="40" rx="10" fill="#243040" stroke="#8b9aab" stroke-width="1.5"/>
+        <text x="660" y="405" text-anchor="middle" fill="#8b9aab" font-size="12">show webcam only</text>
+
+        <path d="M460 362 V390" stroke="#8b9aab" stroke-width="2" marker-end="url(#a2)"/>
+        <text x="445" y="380" text-anchor="end" fill="#8b9aab" font-size="11">yes</text>
+
+        <rect x="250" y="390" width="420" height="50" rx="12" fill="#3a2f18" stroke="#e8b84a" stroke-width="2"/>
+        <text x="460" y="412" text-anchor="middle" fill="#e8b84a" font-size="13" font-family="JetBrains Mono,monospace">For each finger: bendAngle × 3</text>
+        <text x="460" y="430" text-anchor="middle" fill="#8b9aab" font-size="11">a1 knuckle · a2 middle · a3 tip</text>
+
+        <path d="M460 440 V464" stroke="#8b9aab" stroke-width="2" marker-end="url(#a2)"/>
+
+        <rect x="250" y="464" width="420" height="44" rx="12" fill="#3a241c" stroke="#ff7a59" stroke-width="2"/>
+        <text x="460" y="492" text-anchor="middle" fill="#ff7a59" font-size="13" font-family="JetBrains Mono,monospace">robot.setFinger(...) → robot.update()</text>
+
+        <path d="M460 508 V532" stroke="#8b9aab" stroke-width="2"/>
+        <path d="M460 532 H200 V184 H300" stroke="#8b9aab" stroke-width="2" fill="none" marker-end="url(#a2)"/>
+        <text x="210" y="360" fill="#8b9aab" font-size="11">loop until q</text>
+      </svg>
+    </section>
+
+    <!-- FILE MAP -->
+    <section>
+      <h2>3. Project files</h2>
+      <div class="files">
+        <div class="file">
+          <strong>main.py</strong>
+          <p>Your teaching file. Webcam + hand tracking + angle math. Calls <code>RobotHand</code>.</p>
+        </div>
+        <div class="file">
+          <strong>robothand.py</strong>
+          <p>Helper. Starts a WebSocket server and broadcasts JSON finger angles to any open viewer.</p>
+        </div>
+        <div class="file">
+          <strong>viewer/robot_hand.html</strong>
+          <p>Full 3D robot hand (Three.js). Paid / complete experience. Opened by <code>main.py</code>.</p>
+        </div>
+        <div class="file">
+          <strong>viewer/demo.html</strong>
+          <p>Simple joint demo — palm + 3 capsules for the index finger. Same WebSocket data.</p>
+        </div>
+        <div class="file">
+          <strong>requirements.txt</strong>
+          <p>Python packages: cvzone, mediapipe, opencv-python, numpy, websockets.</p>
+        </div>
+        <div class="file">
+          <strong>explained.html</strong>
+          <p>This guide — project flow + bendAngle math.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW FILES TALK -->
+    <section>
+      <h2>4. How files communicate</h2>
+
+      <svg class="diagram" viewBox="0 0 920 340" role="img" aria-label="File communication diagram">
+        <defs>
+          <marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="#8b9aab"/>
+          </marker>
+        </defs>
+
+        <rect x="40" y="40" width="200" height="80" rx="12" fill="#3a2f18" stroke="#e8b84a" stroke-width="2"/>
+        <text x="140" y="75" text-anchor="middle" fill="#e8b84a" font-size="14" font-family="JetBrains Mono,monospace" font-weight="700">main.py</text>
+        <text x="140" y="98" text-anchor="middle" fill="#8b9aab" font-size="12">import RobotHand</text>
+
+        <path d="M240 80 H300" stroke="#e8b84a" stroke-width="2" marker-end="url(#a3)"/>
+        <text x="270" y="70" text-anchor="middle" fill="#e8b84a" font-size="11">import</text>
+
+        <rect x="300" y="40" width="220" height="80" rx="12" fill="#3a241c" stroke="#ff7a59" stroke-width="2"/>
+        <text x="410" y="75" text-anchor="middle" fill="#ff7a59" font-size="14" font-family="JetBrains Mono,monospace" font-weight="700">robothand.py</text>
+        <text x="410" y="98" text-anchor="middle" fill="#8b9aab" font-size="12">setFinger / update</text>
+
+        <path d="M410 120 V160" stroke="#ff7a59" stroke-width="2" marker-end="url(#a3)"/>
+        <text x="420" y="148" fill="#ff7a59" font-size="11">JSON broadcast</text>
+
+        <rect x="300" y="160" width="220" height="60" rx="12" fill="#243040" stroke="#ff7a59" stroke-width="2" stroke-dasharray="5 4"/>
+        <text x="410" y="185" text-anchor="middle" fill="#ff7a59" font-size="13" font-family="JetBrains Mono,monospace">ws://localhost:8765</text>
+        <text x="410" y="205" text-anchor="middle" fill="#8b9aab" font-size="11">WebSocket port</text>
+
+        <path d="M300 190 H200" stroke="#6ecf8e" stroke-width="2" marker-end="url(#a3)"/>
+        <path d="M520 190 H620" stroke="#6ecf8e" stroke-width="2" marker-end="url(#a3)"/>
+
+        <rect x="40" y="250" width="240" height="70" rx="12" fill="#1c3328" stroke="#6ecf8e" stroke-width="2"/>
+        <text x="160" y="280" text-anchor="middle" fill="#6ecf8e" font-size="13" font-family="JetBrains Mono,monospace" font-weight="700">viewer/demo.html</text>
+        <text x="160" y="300" text-anchor="middle" fill="#8b9aab" font-size="11">simple index finger</text>
+
+        <rect x="540" y="250" width="280" height="70" rx="12" fill="#1c3328" stroke="#6ecf8e" stroke-width="2"/>
+        <text x="680" y="280" text-anchor="middle" fill="#6ecf8e" font-size="13" font-family="JetBrains Mono,monospace" font-weight="700">viewer/robot_hand.html</text>
+        <text x="680" y="300" text-anchor="middle" fill="#8b9aab" font-size="11">full 3D five-finger hand</text>
+
+        <path d="M160 250 V220 H300" stroke="#6ecf8e" stroke-width="2" fill="none"/>
+        <path d="M680 250 V220 H520" stroke="#6ecf8e" stroke-width="2" fill="none"/>
+        <text x="460" y="235" text-anchor="middle" fill="#6ecf8e" font-size="11">both listeners connect as clients</text>
+      </svg>
+
+      <div class="legend">
+        <span><i style="background:#e8b84a"></i>Python import / function calls</span>
+        <span><i style="background:#ff7a59"></i>WebSocket JSON</span>
+        <span><i style="background:#6ecf8e"></i>Browser viewers</span>
+      </div>
+
+      <h3>The JSON message</h3>
+      <p>
+        Every <code>robot.update()</code> sends one JSON object. Degrees, <strong>0 = straight</strong>.
+        Each finger is <code>[knuckle, middle, tip]</code>:
+      </p>
+      <pre>{
+  "thumb":  [40, 50, 60],
+  "index":  [8, 5, 4],
+  "middle": [6, 5, 3],
+  "ring":   [80, 100, 65],
+  "pinky":  [80, 100, 65]
+}</pre>
+      <p style="margin-top:12px">
+        <code>robot_hand.html</code> uses all five fingers.
+        <code>demo.html</code> only reads <code>index</code>.
+      </p>
+
+      <h3>Who talks to whom</h3>
+      <ul>
+        <li><span class="hl-py">main.py</span> → imports and calls <span class="hl-ws">robothand.py</span> in-process (normal Python).</li>
+        <li><span class="hl-ws">robothand.py</span> → opens a server on port <code>8765</code> and pushes JSON.</li>
+        <li><span class="hl-view">viewer/*.html</span> → connect as WebSocket clients and animate from that JSON.</li>
+        <li>Viewers never talk to each other. They only listen to Python.</li>
+      </ul>
+    </section>
+
+    <!-- ANGLE PIPELINE -->
+    <section>
+      <h2>5. Angle pipeline (inside main.py)</h2>
+      <ol>
+        <li>MediaPipe / cvzone gives <strong>21 landmarks</strong> on the hand.</li>
+        <li>Each finger has <strong>4 points</strong> (<code>p1…p4</code>), base → tip.</li>
+        <li>We need <strong>3 bend angles</strong> per finger (<code>a1, a2, a3</code>).</li>
+        <li><code>bendAngle(a, b, c)</code> measures the angle at joint <code>b</code> using vectors.</li>
+        <li>Those angles are stored with <code>setFinger</code>, then sent with <code>update</code>.</li>
+      </ol>
+      <pre>a1 = bendAngle(wrist, p1, p2)   # knuckle
+a2 = bendAngle(p1, p2, p3)      # middle
+a3 = bendAngle(p2, p3, p4)      # tip
+robot.setFinger("index", a1, a2, a3)
+robot.update()</pre>
+      <p style="margin-top:12px">
+        Full math walkthrough is in <a href="#bendAngle" style="color:#e8b84a">Part B</a> below.
+      </p>
+    </section>
+
+    <!-- RUN FROM SCRATCH -->
+    <section>
+      <h2>6. Run everything from scratch</h2>
+
+      <div class="step">
+        <div class="num">1</div>
+        <div>
+          <strong>Install Python 3</strong>
+          <p>Use the <code>py</code> launcher on Windows if <code>python</code> opens the Store stub.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="num">2</div>
+        <div>
+          <strong>Open a terminal in the project folder</strong>
+          <pre>cd "path\to\Robot Hand Gesture Control"</pre>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="num">3</div>
+        <div>
+          <strong>Create &amp; activate a virtual environment</strong>
+          <pre>py -m venv venv
+.\venv\Scripts\Activate.ps1</pre>
+          <p>Mac/Linux: <code>source venv/bin/activate</code></p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="num">4</div>
+        <div>
+          <strong>Install dependencies</strong>
+          <pre>pip install -r requirements.txt</pre>
+          <p>First run also downloads the MediaPipe hand model (~8 MB).</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="num">5</div>
+        <div>
+          <strong>Run the app</strong>
+          <pre>python main.py</pre>
+          <p>
+            This starts the WebSocket server, opens <code>viewer/robot_hand.html</code> if needed,
+            and shows the webcam window.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="num">6</div>
+        <div>
+          <strong>Use it</strong>
+          <ul>
+            <li>Hold your palm toward the camera; curl your fingers.</li>
+            <li>Press <code>q</code> in the webcam window to quit.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Optional: simple demo viewer</h3>
+      <p>
+        To use the simple joint page instead, change the path in <code>main.py</code> to
+        <code>viewer/demo.html</code>, or open that file manually while <code>main.py</code> is running —
+        both viewers speak the same protocol on port <code>8765</code>.
+      </p>
+    </section>
+
+    <!-- TROUBLESHOOT -->
+    <section>
+      <h2>7. Quick troubleshooting</h2>
+      <ul>
+        <li><strong>Viewer says waiting…</strong> — run <code>python main.py</code> first; keep the tab open.</li>
+        <li><strong>Port already in use</strong> — another <code>main.py</code> is still running; stop it (<code>Ctrl+C</code> / kill Python).</li>
+        <li><strong>No webcam</strong> — check camera permissions; try another index in <code>VideoCapture(0)</code>.</li>
+        <li><strong>Angles look wrong</strong> — face the palm to the camera; cvzone 2.x landmarks are mostly 2D.</li>
+        <li><strong>mediapipe install fails</strong> — your Python version may need a newer mediapipe wheel (don’t pin an old version on 3.14).</li>
+      </ul>
+    </section>
+
+    <!-- SUMMARY -->
+    <section>
+      <h2>8. One-line summary</h2>
+      <pre>Webcam → main.py (landmarks + bendAngle) → robothand.py (WebSocket JSON)
+      → viewer/robot_hand.html or viewer/demo.html (draw joints)</pre>
+    </section>
+  
+
+    <h2 id="bendAngle" style="font-size:1.35rem;margin:36px 0 8px;color:#e8b84a">Part B — How bendAngle works</h2>
+    <p class="sub" style="margin-bottom:20px">Each finger has 4 points. What we need are the 3 joint angles for the robot.</p>
+
+    
+
+    <!-- INTRO: finger with 4 points -->
+    <section>
+      <h2>1. A finger has 4 points</h2>
+      <p>
+        MediaPipe tracks each finger with <strong>4 landmarks</strong>, from the base knuckle to the tip:
+        <span class="mono">p1</span>, <span class="mono">p2</span>, <span class="mono">p3</span>, <span class="mono">p4</span>.
+      </p>
+
+      <svg class="diagram" viewBox="0 0 640 320" role="img" aria-label="Index finger with 4 landmark points">
+        <!-- soft finger silhouette -->
+        <path d="
+          M 95 250
+          C 95 250, 100 200, 130 170
+          C 160 140, 200 115, 250 95
+          C 290 78, 340 68, 390 60
+          C 430 53, 470 48, 510 42
+          C 530 39, 545 32, 555 22
+          C 562 15, 568 18, 565 28
+          C 560 45, 540 55, 515 60
+          C 475 68, 435 75, 395 85
+          C 345 98, 300 115, 260 140
+          C 220 165, 185 200, 165 240
+          C 155 260, 130 270, 95 250
+          Z"
+          fill="#243040" stroke="#3d5166" stroke-width="2"/>
+
+        <!-- bone chain -->
+        <line x1="150" y1="230" x2="250" y2="140" stroke="#5a6f84" stroke-width="6" stroke-linecap="round"/>
+        <line x1="250" y1="140" x2="370" y2="85" stroke="#5a6f84" stroke-width="6" stroke-linecap="round"/>
+        <line x1="370" y1="85" x2="480" y2="55" stroke="#5a6f84" stroke-width="5" stroke-linecap="round"/>
+        <line x1="480" y1="55" x2="555" y2="28" stroke="#5a6f84" stroke-width="4" stroke-linecap="round"/>
+
+        <!-- 4 points -->
+        <circle cx="150" cy="230" r="14" fill="#5b9fd4"/>
+        <circle cx="250" cy="140" r="14" fill="#e8b84a"/>
+        <circle cx="370" cy="85" r="14" fill="#6ecf8e"/>
+        <circle cx="480" cy="55" r="14" fill="#c084fc"/>
+
+        <!-- tip highlight small -->
+        <circle cx="555" cy="28" r="7" fill="#8b9aab"/>
+
+        <!-- labels -->
+        <text x="150" y="275" text-anchor="middle" fill="#5b9fd4" font-size="22" font-family="Consolas,monospace" font-weight="700">p1</text>
+        <text x="150" y="295" text-anchor="middle" fill="#8b9aab" font-size="13">base / knuckle</text>
+
+        <text x="250" y="120" text-anchor="middle" fill="#e8b84a" font-size="22" font-family="Consolas,monospace" font-weight="700">p2</text>
+        <text x="250" y="105" text-anchor="middle" fill="#8b9aab" font-size="13">joint</text>
+
+        <text x="370" y="65" text-anchor="middle" fill="#6ecf8e" font-size="22" font-family="Consolas,monospace" font-weight="700">p3</text>
+        <text x="370" y="50" text-anchor="middle" fill="#8b9aab" font-size="13">joint</text>
+
+        <text x="480" y="35" text-anchor="middle" fill="#c084fc" font-size="22" font-family="Consolas,monospace" font-weight="700">p4</text>
+        <text x="520" y="18" text-anchor="start" fill="#8b9aab" font-size="13">tip</text>
+
+        <text x="320" y="310" text-anchor="middle" fill="#8b9aab" font-size="15">Example: index finger → 4 points</text>
+      </svg>
+
+      <div class="legend">
+        <span class="leg-a"><span class="mono">p1</span> base</span>
+        <span class="leg-b"><span class="mono">p2</span> middle joint</span>
+        <span class="leg-c"><span class="mono">p3</span> near tip</span>
+        <span style="color:#c084fc"><span class="mono">p4</span> tip</span>
+      </div>
+      <p style="margin-top:14px">
+        In <span class="mono">main.py</span> this is the list
+        <span class="mono">[5, 6, 7, 8]</span> for the index finger (and similar lists for the other fingers).
+      </p>
+    </section>
+
+    <!-- GOAL: 3 angles -->
+    <section>
+      <h2>2. What we need: the 3 angles</h2>
+      <p>
+        The robot hand does not need the raw points.
+        For each finger we only need <strong>3 bend angles</strong> — one at each joint:
+      </p>
+      <ul style="color:#d0dae6; margin: 0 0 14px; padding-left: 1.25rem;">
+        <li><span class="mono" style="color:#ff7a59">a1</span> — base knuckle</li>
+        <li><span class="mono" style="color:#ff7a59">a2</span> — middle joint</li>
+        <li><span class="mono" style="color:#ff7a59">a3</span> — tip joint</li>
+      </ul>
+      <p>
+        Those 3 numbers are what we send with <span class="mono">robot.setFinger(name, a1, a2, a3)</span>.
+      </p>
+
+      <svg class="diagram" viewBox="0 0 640 280" role="img" aria-label="Finger showing 4 points and 3 bend angles">
+        <!-- bones -->
+        <line x1="80" y1="200" x2="200" y2="150" stroke="#3d4f63" stroke-width="6" stroke-linecap="round"/>
+        <line x1="200" y1="150" x2="340" y2="100" stroke="#3d4f63" stroke-width="6" stroke-linecap="round"/>
+        <line x1="340" y1="100" x2="470" y2="70" stroke="#3d4f63" stroke-width="5" stroke-linecap="round"/>
+        <line x1="470" y1="70" x2="580" y2="50" stroke="#3d4f63" stroke-width="4" stroke-linecap="round"/>
+
+        <!-- angle arcs -->
+        <path d="M 165 165 A 32 32 0 0 1 220 140" fill="none" stroke="#ff7a59" stroke-width="3"/>
+        <path d="M 305 115 A 32 32 0 0 1 360 95" fill="none" stroke="#ff7a59" stroke-width="3"/>
+        <path d="M 435 82 A 28 28 0 0 1 485 68" fill="none" stroke="#ff7a59" stroke-width="3"/>
+
+        <!-- 4 points -->
+        <circle cx="80" cy="200" r="11" fill="#8b9aab"/>
+        <circle cx="200" cy="150" r="12" fill="#5b9fd4"/>
+        <circle cx="340" cy="100" r="12" fill="#e8b84a"/>
+        <circle cx="470" cy="70" r="12" fill="#6ecf8e"/>
+        <circle cx="580" cy="50" r="11" fill="#c084fc"/>
+
+        <text x="80" y="235" text-anchor="middle" fill="#8b9aab" font-size="14" font-family="Consolas,monospace">wrist</text>
+        <text x="200" y="185" text-anchor="middle" fill="#5b9fd4" font-size="16" font-family="Consolas,monospace" font-weight="700">p1</text>
+        <text x="340" y="135" text-anchor="middle" fill="#e8b84a" font-size="16" font-family="Consolas,monospace" font-weight="700">p2</text>
+        <text x="470" y="105" text-anchor="middle" fill="#6ecf8e" font-size="16" font-family="Consolas,monospace" font-weight="700">p3</text>
+        <text x="580" y="85" text-anchor="middle" fill="#c084fc" font-size="16" font-family="Consolas,monospace" font-weight="700">p4</text>
+
+        <text x="175" y="130" fill="#ff7a59" font-size="20" font-weight="700" font-family="Consolas,monospace">a1</text>
+        <text x="315" y="75" fill="#ff7a59" font-size="20" font-weight="700" font-family="Consolas,monospace">a2</text>
+        <text x="445" y="48" fill="#ff7a59" font-size="20" font-weight="700" font-family="Consolas,monospace">a3</text>
+
+        <text x="320" y="265" text-anchor="middle" fill="#8b9aab" font-size="15">4 points → measure → 3 angles for the robot</text>
+      </svg>
+
+      <pre>a1 = bendAngle(wrist, p1, p2)  # knuckle
+a2 = bendAngle(p1, p2, p3)     # middle
+a3 = bendAngle(p2, p3, p4)     # tip
+robot.setFinger("index", a1, a2, a3)</pre>
+    </section>
+
+    <!-- STEP 3 -->
+    <section>
+      <h2>3. To measure one joint, pick 3 of those points</h2>
+      <p>
+        At every joint we take three landmarks:
+        <span class="mono hl-a">a</span> (before),
+        <span class="mono hl-b">b</span> (the joint),
+        <span class="mono hl-c">c</span> (after).
+      </p>
+
+      <svg class="diagram" viewBox="0 0 640 260" role="img" aria-label="Three points a, b, c along a bent finger">
+        <!-- finger outline suggestion -->
+        <path d="M80 180 L220 160 L360 100 L520 70" fill="none" stroke="#2a3848" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M80 180 L220 160 L360 100 L520 70" fill="none" stroke="#3d5166" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+        <!-- points -->
+        <circle cx="220" cy="160" r="12" fill="#5b9fd4"/>
+        <circle cx="360" cy="100" r="14" fill="#e8b84a"/>
+        <circle cx="520" cy="70" r="12" fill="#6ecf8e"/>
+
+        <!-- labels -->
+        <text x="220" y="210" text-anchor="middle" fill="#5b9fd4" font-size="22" font-family="Consolas,monospace" font-weight="700">a</text>
+        <text x="220" y="232" text-anchor="middle" fill="#8b9aab" font-size="13">before</text>
+
+        <text x="360" y="55" text-anchor="middle" fill="#e8b84a" font-size="22" font-family="Consolas,monospace" font-weight="700">b</text>
+        <text x="360" y="38" text-anchor="middle" fill="#8b9aab" font-size="13">joint</text>
+
+        <text x="520" y="40" text-anchor="middle" fill="#6ecf8e" font-size="22" font-family="Consolas,monospace" font-weight="700">c</text>
+        <text x="520" y="22" text-anchor="middle" fill="#8b9aab" font-size="13">after</text>
+
+        <text x="320" y="250" text-anchor="middle" fill="#8b9aab" font-size="14">Example: middle joint of the index finger</text>
+      </svg>
+
+      <div class="legend">
+        <span class="leg-a"><span class="mono">a</span> = point before the joint</span>
+        <span class="leg-b"><span class="mono">b</span> = the joint itself</span>
+        <span class="leg-c"><span class="mono">c</span> = point after the joint</span>
+      </div>
+    </section>
+
+    <!-- STEP 2 -->
+    <section>
+      <h2>4. Build two bone vectors</h2>
+      <p>
+        From those points we make two direction vectors (like two bones meeting at <span class="mono hl-b">b</span>):
+      </p>
+      <pre><span class="hl-v1">v1 = b - a</span>   <span style="color:#8b9aab"># bone pointing into the joint</span>
+<span class="hl-v2">v2 = c - b</span>   <span style="color:#8b9aab"># bone pointing out of the joint</span></pre>
+
+      <svg class="diagram" viewBox="0 0 640 280" role="img" aria-label="Vectors v1 and v2 meeting at joint b">
+        <!-- bones as faint lines -->
+        <line x1="120" y1="200" x2="300" y2="140" stroke="#3d4f63" stroke-width="4"/>
+        <line x1="300" y1="140" x2="500" y2="80" stroke="#3d4f63" stroke-width="4"/>
+
+        <!-- vector v1 arrow -->
+        <defs>
+          <marker id="arrV1" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6 Z" fill="#ff7a59"/>
+          </marker>
+          <marker id="arrV2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6 Z" fill="#c084fc"/>
+          </marker>
+        </defs>
+
+        <line x1="120" y1="200" x2="285" y2="145" stroke="#ff7a59" stroke-width="5" marker-end="url(#arrV1)"/>
+        <line x1="300" y1="140" x2="485" y2="85" stroke="#c084fc" stroke-width="5" marker-end="url(#arrV2)"/>
+
+        <!-- points -->
+        <circle cx="120" cy="200" r="11" fill="#5b9fd4"/>
+        <circle cx="300" cy="140" r="13" fill="#e8b84a"/>
+        <circle cx="500" cy="80" r="11" fill="#6ecf8e"/>
+
+        <text x="120" y="235" text-anchor="middle" fill="#5b9fd4" font-size="20" font-family="Consolas,monospace" font-weight="700">a</text>
+        <text x="300" y="115" text-anchor="middle" fill="#e8b84a" font-size="20" font-family="Consolas,monospace" font-weight="700">b</text>
+        <text x="500" y="55" text-anchor="middle" fill="#6ecf8e" font-size="20" font-family="Consolas,monospace" font-weight="700">c</text>
+
+        <text x="190" y="155" fill="#ff7a59" font-size="18" font-family="Consolas,monospace" font-weight="700">v1</text>
+        <text x="390" y="95" fill="#c084fc" font-size="18" font-family="Consolas,monospace" font-weight="700">v2</text>
+
+        <!-- angle arc -->
+        <path d="M 265 152 A 40 40 0 0 1 335 125" fill="none" stroke="#e8b84a" stroke-width="2.5"/>
+        <text x="300" y="175" text-anchor="middle" fill="#e8b84a" font-size="16">θ bend</text>
+      </svg>
+
+      <div class="legend">
+        <span class="leg-v1"><span class="mono">v1 = b − a</span></span>
+        <span class="leg-v2"><span class="mono">v2 = c − b</span></span>
+        <span class="leg-b">θ = angle between them</span>
+      </div>
+    </section>
+
+    <!-- STEP 3 -->
+    <section>
+      <h2>5. Cosine of the angle (dot product)</h2>
+      <p>
+        The <strong>dot product</strong> of two vectors relates to the angle between them:
+      </p>
+      <div class="formula">
+        cos(θ) = (v1 · v2) / (|v1| × |v2|)
+      </div>
+      <pre>cos = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2) + 1e-6)</pre>
+      <p style="margin-top:12px">
+        <span class="mono">np.dot</span> = how aligned the bones are<br />
+        <span class="mono">np.linalg.norm</span> = length of each bone<br />
+        <span class="mono">+ 1e-6</span> = tiny number so we never divide by zero
+      </p>
+    </section>
+
+    <!-- STEP 4 -->
+    <section>
+      <h2>6. Convert cosine → degrees</h2>
+      <pre>return np.degrees(np.arccos(np.clip(cos, -1, 1)))</pre>
+
+      <div class="step" style="margin-top:16px">
+        <div class="num">1</div>
+        <div>
+          <strong class="mono">np.clip(cos, -1, 1)</strong>
+          <p>Floating-point error can push cos slightly outside [-1, 1]. Clip keeps <span class="mono">arccos</span> happy.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <div>
+          <strong class="mono">np.arccos(...)</strong>
+          <p>Turns cosine into radians (angle between the two bones).</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <div>
+          <strong class="mono">np.degrees(...)</strong>
+          <p>Converts radians → degrees for the robot hand.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 5 -->
+    <section>
+      <h2>7. What the number means</h2>
+      <p><strong>0°</strong> = perfectly straight. Larger = more bent.</p>
+
+      <div class="compare" style="margin-top:14px">
+        <div class="card">
+          <h3>Straight finger → ~0°</h3>
+          <svg viewBox="0 0 280 120" width="100%" aria-label="Straight finger nearly 0 degrees">
+            <line x1="30" y1="60" x2="250" y2="60" stroke="#3d4f63" stroke-width="5"/>
+            <line x1="30" y1="60" x2="130" y2="60" stroke="#ff7a59" stroke-width="4" marker-end="url(#arrV1)"/>
+            <line x1="140" y1="60" x2="240" y2="60" stroke="#c084fc" stroke-width="4" marker-end="url(#arrV2)"/>
+            <circle cx="40" cy="60" r="8" fill="#5b9fd4"/>
+            <circle cx="140" cy="60" r="9" fill="#e8b84a"/>
+            <circle cx="240" cy="60" r="8" fill="#6ecf8e"/>
+            <text x="40" y="90" text-anchor="middle" fill="#5b9fd4" font-size="14" font-family="Consolas,monospace">a</text>
+            <text x="140" y="90" text-anchor="middle" fill="#e8b84a" font-size="14" font-family="Consolas,monospace">b</text>
+            <text x="240" y="90" text-anchor="middle" fill="#6ecf8e" font-size="14" font-family="Consolas,monospace">c</text>
+            <text x="140" y="30" text-anchor="middle" fill="#e8b84a" font-size="15" font-weight="700">θ ≈ 0°</text>
+          </svg>
+          <div class="note">v1 and v2 point the same way → cos ≈ 1 → angle ≈ 0</div>
+        </div>
+
+        <div class="card">
+          <h3>Bent finger → large angle</h3>
+          <svg viewBox="0 0 280 140" width="100%" aria-label="Bent finger large angle">
+            <line x1="40" y1="100" x2="140" y2="50" stroke="#3d4f63" stroke-width="5"/>
+            <line x1="140" y1="50" x2="230" y2="110" stroke="#3d4f63" stroke-width="5"/>
+            <line x1="40" y1="100" x2="128" y2="56" stroke="#ff7a59" stroke-width="4" marker-end="url(#arrV1)"/>
+            <line x1="140" y1="50" x2="218" y2="102" stroke="#c084fc" stroke-width="4" marker-end="url(#arrV2)"/>
+            <path d="M 118 62 A 28 28 0 0 1 158 68" fill="none" stroke="#e8b84a" stroke-width="2"/>
+            <circle cx="40" cy="100" r="8" fill="#5b9fd4"/>
+            <circle cx="140" cy="50" r="9" fill="#e8b84a"/>
+            <circle cx="230" cy="110" r="8" fill="#6ecf8e"/>
+            <text x="40" y="125" text-anchor="middle" fill="#5b9fd4" font-size="14" font-family="Consolas,monospace">a</text>
+            <text x="140" y="30" text-anchor="middle" fill="#e8b84a" font-size="14" font-family="Consolas,monospace">b</text>
+            <text x="230" y="135" text-anchor="middle" fill="#6ecf8e" font-size="14" font-family="Consolas,monospace">c</text>
+            <text x="165" y="45" fill="#e8b84a" font-size="15" font-weight="700">θ ≈ 90°</text>
+          </svg>
+          <div class="note">Bones turn at b → cos smaller → angle bigger</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FULL CODE -->
+    <section>
+      <h2>Full function (from main.py)</h2>
+      <pre>def bendAngle(a, b, c):
+    """Angle at point b in degrees. 0 = straight."""
+    a, b, c = np.array(a), np.array(b), np.array(c)
+    v1, v2 = b - a, c - b
+    cos = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2) + 1e-6)
+    return np.degrees(np.arccos(np.clip(cos, -1, 1)))</pre>
+    </section>
+
+    <!-- USAGE -->
+    <section>
+      <h2>How main.py uses it</h2>
+      <p>Each finger has 3 joints. For landmarks <span class="mono">p1, p2, p3, p4</span>:</p>
+      <pre>a1 = bendAngle(lm[0], lm[p1], lm[p2])  # knuckle (wrist → base → mid)
+a2 = bendAngle(lm[p1], lm[p2], lm[p3])  # middle joint
+a3 = bendAngle(lm[p2], lm[p3], lm[p4])  # tip joint</pre>
+
+      <svg class="diagram" viewBox="0 0 640 200" role="img" aria-label="Four landmarks and three bend angles on one finger">
+        <line x1="60" y1="140" x2="180" y2="120" stroke="#3d4f63" stroke-width="5"/>
+        <line x1="180" y1="120" x2="320" y2="90" stroke="#3d4f63" stroke-width="5"/>
+        <line x1="320" y1="90" x2="450" y2="70" stroke="#3d4f63" stroke-width="5"/>
+        <line x1="450" y1="70" x2="570" y2="55" stroke="#3d4f63" stroke-width="5"/>
+
+        <circle cx="60" cy="140" r="10" fill="#8b9aab"/>
+        <circle cx="180" cy="120" r="10" fill="#5b9fd4"/>
+        <circle cx="320" cy="90" r="10" fill="#e8b84a"/>
+        <circle cx="450" cy="70" r="10" fill="#6ecf8e"/>
+        <circle cx="570" cy="55" r="10" fill="#c084fc"/>
+
+        <text x="60" y="175" text-anchor="middle" fill="#8b9aab" font-size="14" font-family="Consolas,monospace">wrist</text>
+        <text x="180" y="155" text-anchor="middle" fill="#5b9fd4" font-size="14" font-family="Consolas,monospace">p1</text>
+        <text x="320" y="125" text-anchor="middle" fill="#e8b84a" font-size="14" font-family="Consolas,monospace">p2</text>
+        <text x="450" y="105" text-anchor="middle" fill="#6ecf8e" font-size="14" font-family="Consolas,monospace">p3</text>
+        <text x="570" y="90" text-anchor="middle" fill="#c084fc" font-size="14" font-family="Consolas,monospace">p4</text>
+
+        <text x="150" y="85" fill="#ff7a59" font-size="15" font-weight="700">a1</text>
+        <text x="280" y="55" fill="#ff7a59" font-size="15" font-weight="700">a2</text>
+        <text x="410" y="40" fill="#ff7a59" font-size="15" font-weight="700">a3</text>
+      </svg>
+    </section>
+  
+
+  </main>
+</body>
+</html>
