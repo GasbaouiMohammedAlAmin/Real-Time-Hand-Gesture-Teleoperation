@@ -71,7 +71,6 @@ Every frame update sends a lightweight JSON payload of finger bend angles in deg
 │   │   ├── three.min.js        # Offline Three.js library
 │   │   └── OrbitControls.js    # Offline camera controls
 │   ├── robot_hand.html         # Full 3D 5-finger Three.js viewer
-│   ├── index.html              # Standard entrypoint (mirrors robot_hand.html)
 │   └── demo.html               # Lightweight 2D canvas single-finger demo
 ├── main.py                     # Main script: webcam capture + tracking + viewer launch
 ├── robothand.py                # Background WebSocket broadcaster server
@@ -98,7 +97,7 @@ Follow these steps to set up and run the project locally.
 ### 2. Clone the Repository
 
 ```bash
-git clone https://github.com/<your-username>/robot-hand-gesture-control.git
+git clone https://github.com/GasbaouiMohammedAlAmin/Real-Time-Hand-Gesture-Teleoperation
 cd robot-hand-gesture-control
 ```
 
