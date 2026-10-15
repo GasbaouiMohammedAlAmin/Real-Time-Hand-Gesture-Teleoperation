@@ -16,6 +16,8 @@ A real-time computer vision and 3D teleoperation system that captures hand gestu
 
 *Real-time webcam tracking (left) mirroring 5 articulated fingers with live angle telemetry in Three.js (right).*
 
+Video explanation: https://www.youtube.com/watch?v=Wxui0JSesWU
+
 ---
 
 ## 🌟 Features
